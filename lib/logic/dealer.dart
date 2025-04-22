@@ -13,7 +13,7 @@ class Dealer {
   final int size = 5;
   int callAmount = 5; // starting call amount
   // none of the players have folded initially
-  final List<bool> hasFolded = [false, false];
+  final List<bool> hasFolded = [false, false, false, false];
 
   // Round 1
   // Players are assigned and given 2 cards each

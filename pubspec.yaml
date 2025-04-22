@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_ble_peripheral: ^1.2.6
   flutter_blue_plus: ^1.35.3
   permission_handler: ^11.4.0
   playing_cards: ^0.4.1+11

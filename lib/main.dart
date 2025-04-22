@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:street_fighter/bluetooth/server.dart';
-import 'package:street_fighter/screen/game.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,9 +28,7 @@ class MainApp extends StatelessWidget {
               title: const Text('Texas Hold \'em'),
               centerTitle: true,
             )),
-        // uncomment to see bluetooth screen
-        //body: const Server(),
-        body: const GameScreen(),
+        body: const PokerBluetoothManager(),
       ),
     );
   }

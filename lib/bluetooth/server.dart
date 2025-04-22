@@ -1,220 +1,185 @@
 // Dart Imports
 import 'dart:async';
 import 'dart:convert' show utf8;
+import 'dart:typed_data';
 
 // Package Imports
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:street_fighter/screen/game.dart';
 
-// Constants
-const String SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const String CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-const String TARGET_DEVICE_NAME = "Poker";
+// // Constants
+// const String BLERemoteServiceUUID = "62154268-5851-4fb5-89c7-a1f925cd3f7e";
 
-class Server extends StatefulWidget {
-  const Server({super.key});
+const String targetDeviceName = "Poker"; // this is what the M5s will see
+const String playerOneID = "Player1";
+const String playerTwoID = "Player2";
+const String playerThreeID = "Player3";
+const String playerFourID = "Player4";
+const int numOfDevicesToConnectTo = 0;
 
-  @override
-  State<Server> createState() => _ServerState();
+List<Guid> characteristicUUIDs = [
+  Guid("3c479062-fca6-4e2b-8812-172a47615aff"), // Game state
+  Guid("c819b023-58d4-446a-8d8f-08e62ed260eb"), // Player 1 cards
+  Guid("7bead971-e8e2-4a50-8fd8-80b2cf60a9fa"), // Player 2 cards
+  Guid("5841761e-dd59-45cf-8940-27b77cb3fce4"), // Player 3 cards
+  Guid("4b727791-ab46-4d97-84fd-c1ea9aee6b74"), // Player 4 cards
+  Guid("8d41cee6-79cb-43a2-8dca-52234c35046e"), // Dealer cards
+  Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503"), // Current bet
+  Guid("ad58c34d-1024-4ecd-adb1-6bfaa4d90b96"), // Player 1 bet
+  Guid("c342b6b6-c3d5-4e8f-8cfc-ec2464301d52"), // Player 2 bet
+  Guid("1317efee-c8c5-48d7-9f5d-06ff5476a252"), // Player 3 bet
+  Guid("875efd4a-887a-40b1-a002-79ca6e63298a"), // Player 4 bet
+  Guid("6b050126-2bd9-4b6f-9a30-aed591d606dd"), // Player 1 visibility
+  Guid("d1447be5-9f76-4c26-9a35-c26e49edfe8d"), // Player 2 visibility
+  Guid("87f38e02-435f-4dfb-898b-6da90878334d"), // Player 3 visibility
+  Guid("4585dbe4-3429-4be0-9f07-d497bbddaa32"), // Player 4 visibility
+];
+
+class M5Device {
+  final BluetoothDevice device;
+  Map<Guid, BluetoothCharacteristic> characteristics = {};
+
+  M5Device(this.device);
 }
 
-class _ServerState extends State<Server> {
-  final _bleDeviceController = TextEditingController()
-    ..text = TARGET_DEVICE_NAME;
-  final _dataController = TextEditingController();
+class PokerBluetoothManager extends StatefulWidget {
+  const PokerBluetoothManager({super.key});
 
-  FlutterBluePlus flutterBlue = FlutterBluePlus();
-  late StreamSubscription<ScanResult> scanSubscription;
-  late BluetoothDevice targetDevice;
-  late BluetoothCharacteristic targetCharacteristic;
+  @override
+  State<StatefulWidget> createState() {
+    return _PokerBluetoothManagerState();
+  }
+}
 
-  // connecting multiple bluetooth devices
-  // key = device ID
-  // value = Bluetooth Device
-  Map<String, BluetoothDevice> connectedDevices = {};
+class _PokerBluetoothManagerState extends State<PokerBluetoothManager> {
+  final FlutterBluePlus flutterBlue = FlutterBluePlus();
+  final List<M5Device> connectedDevices = [];
 
-  String bleStatus = "No Connection";
-  String bleLastRead = "N/A";
-  bool targetDeviceFound = false;
-  bool isConnectedToTarget = false;
-  String btnConnectionText = "Connect";
+  @override
+  void initState() {
+    super.initState();
+  }
 
-  _startScan() {
-    setState(() => bleStatus = "Scanning available BLE devices...");
+  Future<void> scanAndConnectToDevices(BuildContext context) async {
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
 
-    // Start scan with timeout using the `startScan` method which returns a `Future`
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 10)).then((_) {
-      // This will be executed after the scan is completed
-      setState(() => bleStatus = "Scan completed");
-    });
+    FlutterBluePlus.scanResults.listen((results) async {
+      for (ScanResult result in results) {
+        if ((result.device.platformName == playerOneID ||
+                result.device.platformName == playerTwoID ||
+                result.device.platformName == playerThreeID ||
+                result.device.platformName == playerFourID) &&
+            !_alreadyConnected(result.device)) {
+          await FlutterBluePlus.stopScan();
+          print("Connecting to: ${result.device.remoteId.str}");
+          await result.device.connect(autoConnect: false);
+          final m5 = M5Device(result.device);
+          await _discoverServicesAndChars(m5);
+          connectedDevices.add(m5);
 
-    // Listen to the scan results stream, which emits a List<ScanResult> each time
-    scanSubscription =
-        FlutterBluePlus.scanResults.listen((List<ScanResult> scanResults) {
-      for (var scanResult in scanResults) {
-        if (scanResult.device.platformName == _bleDeviceController.text) {
-          setState(() {
-            targetDevice = scanResult.device;
-            bleStatus = "Found ${targetDevice.platformName}";
-            targetDeviceFound = true;
-            btnConnectionText = "Connect";
-          });
-
-          _stopScan();
-          scanSubscription.cancel();
-          break;
+          if (connectedDevices.length >= numOfDevicesToConnectTo) {
+            // Navigate to main screen when all 4 M5s are connected
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => GameScreen(
+                        devices: connectedDevices,
+                        sendBet: sendBet,
+                        readBet: readBet,
+                        readPlayerVis: readPlayerVis,
+                        writeWinner: writeWinner,
+                        readGameState: readGameState,
+                        writeGameState: writeGameState,
+                        writePlayerCards: writePlayerCards,
+                      )),
+            );
+          } else {
+            FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+          }
         }
       }
-    }) as StreamSubscription<ScanResult>;
-  }
-
-  _stopScan() {
-    FlutterBluePlus.stopScan();
-    setState(() => bleStatus = "${_bleDeviceController.text} not found");
-  }
-
-  _checkPermissions() async {
-    if (await Permission.bluetoothScan.request().isGranted) {
-      print("BLE Scan Permission Granted");
-    } else {
-      print("BLE Scan Permission NOT Granted");
-    }
-
-    if (await Permission.bluetoothConnect.request().isGranted) {
-      print("BLE Connect Permission Granted");
-    } else {
-      print("BLE Connect Permission NOT Granted");
-    }
-  }
-
-  _connectToDevice() async {
-    setState(() => bleStatus = "Connecting to ${targetDevice.platformName}");
-    await targetDevice.connect();
-    setState(() {
-      bleStatus = "Connected to ${targetDevice.platformName}";
-      isConnectedToTarget = true;
-      btnConnectionText = "Disconnect";
-    });
-    _discoverServices();
-  }
-
-  _disconnectFromDevice() {
-    targetDevice.disconnect();
-    setState(() {
-      bleStatus = "Disconnected";
-      isConnectedToTarget = false;
-      btnConnectionText = "Connect";
-      targetDeviceFound = false;
     });
   }
 
-  _discoverServices() async {
-    List<BluetoothService> services = await targetDevice.discoverServices();
+  bool _alreadyConnected(BluetoothDevice device) {
+    return connectedDevices
+        .any((d) => d.device.remoteId.str == device.remoteId.str);
+  }
+
+  Future<void> _discoverServicesAndChars(M5Device m5) async {
+    List<BluetoothService> services = await m5.device.discoverServices();
     for (var service in services) {
-      if (service.uuid.toString() == SERVICE_UUID) {
-        for (var characteristic in service.characteristics) {
-          if (characteristic.uuid.toString() == CHARACTERISTIC_UUID) {
-            targetCharacteristic = characteristic;
+      for (var char in service.characteristics) {
+        if (characteristicUUIDs.contains(char.uuid)) {
+          m5.characteristics[char.uuid] = char;
+
+          // Optionally listen to notifications:
+          if (char.properties.notify) {
+            await char.setNotifyValue(true);
+            char.lastValueStream.listen((value) {
+              print("Notification from ${char.uuid}: ${utf8.decode(value)}");
+            });
           }
         }
       }
     }
   }
 
-  _writeTextFieldData() async {
-    await _writeData(_dataController.text);
+  Future<void> sendBet(BluetoothCharacteristic characteristic, int bet) async {
+    final bytes = ByteData(4)..setInt32(0, bet, Endian.little);
+    await characteristic.write(bytes.buffer.asUint8List());
   }
 
-  _writeData(String data) async {
-    List<int> bytes = utf8.encode(data);
-    await targetCharacteristic.write(bytes);
+  Future<int?> readBet(BluetoothCharacteristic characteristic) async {
+    final value = await characteristic.read();
+    return ByteData.sublistView(Uint8List.fromList(value))
+        .getInt32(0, Endian.little);
   }
 
-  _readData() async {
-    List<int> bytes = await targetCharacteristic.read();
-    setState(() => bleLastRead = utf8.decode(bytes));
+  Future<int?> readPlayerVis(BluetoothCharacteristic characteristic) async {
+    final value = await characteristic.read();
+    return ByteData.sublistView(Uint8List.fromList(value))
+        .getInt32(0, Endian.little);
+  }
+
+  Future<void> writeWinner(
+      BluetoothCharacteristic characteristic, String winner) async {
+    final bytes = utf8.encode(winner);
+    await characteristic.write(bytes);
+  }
+
+  Future<int?> readGameState(BluetoothCharacteristic characteristic) async {
+    final value = await characteristic.read();
+    // if this return value doesnt work, try value[0]
+    return ByteData.sublistView(Uint8List.fromList(value))
+        .getInt32(0, Endian.little);
+  }
+
+  Future<void> writeGameState(
+      BluetoothCharacteristic characteristic, int state) async {
+    final bytes = ByteData(4)..setInt32(0, state, Endian.little);
+    await characteristic.write(bytes.buffer.asUint8List());
+    // if this doesn't work try await characteristic.write([value]);
+  }
+
+  Future<void> writePlayerCards(
+      BluetoothCharacteristic characteristic, String cards) async {
+    final bytes = utf8.encode(cards);
+    await characteristic.write(bytes);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      child: Scrollbar(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "BLE Connection Actions",
-                style: TextStyle(fontSize: 28),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'BLE Device Name'),
-                controller: _bleDeviceController,
-              ),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _checkPermissions(),
-                    child: const Text('Ensure Permissions'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () => _startScan(),
-                    child: const Text('Scan'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: !targetDeviceFound
-                        ? null
-                        : () {
-                            if (isConnectedToTarget) {
-                              _disconnectFromDevice();
-                            } else {
-                              _connectToDevice();
-                            }
-                          },
-                    child: Text(btnConnectionText),
-                  ),
-                ],
-              ),
-              Text(
-                "BLE Status: $bleStatus",
-                style: const TextStyle(fontSize: 20),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                "BLE Read/Write Actions",
-                style: TextStyle(fontSize: 28),
-              ),
-              ElevatedButton(
-                onPressed: () => _readData(),
-                child: const Text('Read from ESP32'),
-              ),
-              Text(
-                "Last Read: $bleLastRead",
-                style: const TextStyle(fontSize: 20),
-              ),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _writeTextFieldData(),
-                    child: const Text('Write to ESP32'),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(labelText: 'Data'),
-                      controller: _dataController,
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
+    return Center(
+      child: ElevatedButton(
+        onPressed: () async {
+          await Permission.bluetooth.request();
+          await Permission.location.request();
+          await scanAndConnectToDevices(context);
+        },
+        child: const Text("Connect to Devices"),
       ),
     );
   }
