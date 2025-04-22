@@ -1174,14 +1174,20 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   // current bet, game state, winner
-  void _makeMove() {
+  void _makeMove() async {
     for (int i = 0; i < widget.devices.length; i++) {
+      // send current call amount (current bet) to everyone
       widget.sendBet(
         widget.devices[i]
             .characteristics[Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503")]!,
         dealer.callAmount,
       );
-      if (playerNumber == 1) {
+      // send game state to everyone (basically who's turn it is or if game ended)
+      widget.writeGameState(
+          widget.devices[i]
+              .characteristics[Guid("3c479062-fca6-4e2b-8812-172a47615aff")]!,
+          playerNumber);
+      if (playerNumber == 0) {
         // p1 needs to make a move
         attemptGameStateRead(
           () {
@@ -1192,6 +1198,119 @@ class _GameScreenState extends State<GameScreen> {
           widget.devices[0]
               .characteristics[Guid("3c479062-fca6-4e2b-8812-172a47615aff")]!,
         );
+        int? theirBet = await widget.readBet(widget.devices[0]
+            .characteristics[Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503")]!);
+        // they made a call
+        if (theirBet! == dealer.callAmount) {
+        } else if (theirBet > dealer.callAmount) {
+          // made a raise
+          dealer.updateCallAmount(theirBet - dealer.callAmount);
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: true,
+          );
+        } else {
+          // checked
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: false,
+          );
+        }
+      } else if (playerNumber == 1) {
+        // p2 needs to make a move
+        attemptGameStateRead(
+          () {
+            setState(() {
+              gameState = 5;
+            });
+          },
+          widget.devices[1]
+              .characteristics[Guid("3c479062-fca6-4e2b-8812-172a47615aff")]!,
+        );
+        int? theirBet = await widget.readBet(widget.devices[1]
+            .characteristics[Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503")]!);
+        // they made a call
+        if (theirBet! == dealer.callAmount) {
+        } else if (theirBet > dealer.callAmount) {
+          // made a raise
+          dealer.updateCallAmount(theirBet - dealer.callAmount);
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: true,
+          );
+        } else {
+          // checked
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: false,
+          );
+        }
+      } else if (playerNumber == 2) {
+        // p3 needs to make a move
+        attemptGameStateRead(
+          () {
+            setState(() {
+              gameState = 5;
+            });
+          },
+          widget.devices[2]
+              .characteristics[Guid("3c479062-fca6-4e2b-8812-172a47615aff")]!,
+        );
+        int? theirBet = await widget.readBet(widget.devices[2]
+            .characteristics[Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503")]!);
+        // they made a call
+        if (theirBet! == dealer.callAmount) {
+        } else if (theirBet > dealer.callAmount) {
+          // made a raise
+          dealer.updateCallAmount(theirBet - dealer.callAmount);
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: true,
+          );
+        } else {
+          // checked
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: false,
+          );
+        }
+      } else {
+        // p4 needs to make a move
+        attemptGameStateRead(
+          () {
+            setState(() {
+              gameState = 5;
+            });
+          },
+          widget.devices[3]
+              .characteristics[Guid("3c479062-fca6-4e2b-8812-172a47615aff")]!,
+        );
+        int? theirBet = await widget.readBet(widget.devices[3]
+            .characteristics[Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503")]!);
+        // they made a call
+        if (theirBet! == dealer.callAmount) {
+        } else if (theirBet > dealer.callAmount) {
+          // made a raise
+          dealer.updateCallAmount(theirBet - dealer.callAmount);
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: true,
+          );
+        } else {
+          // checked
+          _updateTurns(
+            playerNumber: playerNumber,
+            madeTurn: true,
+            isRaise: false,
+          );
+        }
       }
     }
     setState(() {
