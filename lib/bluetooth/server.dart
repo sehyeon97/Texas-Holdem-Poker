@@ -21,20 +21,11 @@ const int numOfDevicesToConnectTo = 0;
 
 List<Guid> characteristicUUIDs = [
   Guid("3c479062-fca6-4e2b-8812-172a47615aff"), // Game state
-  Guid("c819b023-58d4-446a-8d8f-08e62ed260eb"), // Player 1 cards
-  Guid("7bead971-e8e2-4a50-8fd8-80b2cf60a9fa"), // Player 2 cards
-  Guid("5841761e-dd59-45cf-8940-27b77cb3fce4"), // Player 3 cards
-  Guid("4b727791-ab46-4d97-84fd-c1ea9aee6b74"), // Player 4 cards
-  Guid("8d41cee6-79cb-43a2-8dca-52234c35046e"), // Dealer cards
+  Guid("4b727791-ab46-4d97-84fd-c1ea9aee6b74"), // Winner
   Guid("710c29f5-bc94-424b-a80f-7ac6d7b1e503"), // Current bet
-  Guid("ad58c34d-1024-4ecd-adb1-6bfaa4d90b96"), // Player 1 bet
-  Guid("c342b6b6-c3d5-4e8f-8cfc-ec2464301d52"), // Player 2 bet
-  Guid("1317efee-c8c5-48d7-9f5d-06ff5476a252"), // Player 3 bet
-  Guid("875efd4a-887a-40b1-a002-79ca6e63298a"), // Player 4 bet
-  Guid("6b050126-2bd9-4b6f-9a30-aed591d606dd"), // Player 1 visibility
-  Guid("d1447be5-9f76-4c26-9a35-c26e49edfe8d"), // Player 2 visibility
-  Guid("87f38e02-435f-4dfb-898b-6da90878334d"), // Player 3 visibility
-  Guid("4585dbe4-3429-4be0-9f07-d497bbddaa32"), // Player 4 visibility
+  Guid("c819b023-58d4-446a-8d8f-08e62ed260eb"), // Player cards
+  Guid("ad58c34d-1024-4ecd-adb1-6bfaa4d90b96"), // Player bet
+  Guid("6b050126-2bd9-4b6f-9a30-aed591d606dd"), // Player visibility
 ];
 
 class M5Device {
