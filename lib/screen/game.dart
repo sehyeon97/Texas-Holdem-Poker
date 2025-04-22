@@ -64,7 +64,7 @@ class _GameScreenState extends State<GameScreen> {
     "nsdevries": "", // P1
     "sehyeoo": "", // P2
     "DrDan": "", // P3
-    "Player4": "", // P4
+    "Pl4yer": "", // P4
   };
 
   // most recent 2 events to display on logs
@@ -99,7 +99,7 @@ class _GameScreenState extends State<GameScreen> {
     "nsdevries", // P1
     "sehyeoo", // P2
     "DrDan", // P3
-    "Player4", // P4
+    "Pl4yer", // P4
   ];
   // the name of player that is currently allowed to make a move
   String nameOfPlayer = "nsdevries";
@@ -140,6 +140,7 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     dealer = Dealer();
     dealer.assignAllPlayerCards(namesOfPlayers);
+    
     dealer.drawThreeCommunityCards();
   }
 
